@@ -1,48 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>网页版数独游戏</title>
+    <title>soduko</title>
     <style>
         :root {
-            --cell-size: min(8vw, 50px);
+            --cell-size: min(10vw, 50px);
+            --border-color: #333;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             margin: 0;
-            padding: 0;
+            padding: 20px;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #f0f0f0;
-            touch-action: manipulation;
+            background: #f0f3f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .container {
             width: 100%;
             max-width: 600px;
-            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 1.8em;
         }
 
         .sudoku-grid {
             display: grid;
             grid-template-columns: repeat(9, var(--cell-size));
-            grid-template-rows: repeat(9, var(--cell-size));
-            gap: 0;
-            border: 2px solid #000;
             margin: 0 auto;
             background: #fff;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .cell {
             position: relative;
+            height: var(--cell-size);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: calc(var(--cell-size) * 0.4);
-            border: 1px solid #999;
-            box-sizing: border-box;
+            font-size: calc(var(--cell-size) * 0.45);
+            border: 1px solid #ddd;
         }
 
         .cell input {
@@ -52,85 +63,84 @@
             text-align: center;
             font-size: inherit;
             background: transparent;
-            -webkit-appearance: none;
             -moz-appearance: textfield;
         }
 
         .cell input::-webkit-outer-spin-button,
         .cell input::-webkit-inner-spin-button {
             -webkit-appearance: none;
+            margin: 0;
         }
 
         /* 3x3宫格边框 */
         .cell:nth-child(3n) {
-            border-right: 2px solid #000;
+            border-right: 2px solid var(--border-color);
         }
 
         .cell:nth-child(n+19):nth-child(-n+27),
-        .cell:nth-child(n+46):nth-child(-n+54),
-        .cell:nth-child(n+73) {
-            border-bottom: 2px solid #000;
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--border-color);
         }
 
-        /* 外边框 */
-        .cell:first-child,
-        .cell:nth-child(n+10):nth-child(-n+18),
-        .cell:nth-child(n+28):nth-child(-n+36) {
-            border-top: 2px solid #000;
-        }
-
-        .cell:nth-child(9n+1) {
-            border-left: 2px solid #000;
-        }
-
-        .cell:nth-child(9n) {
-            border-right: 2px solid #000;
-        }
-
-        .cell:nth-child(n+73) {
-            border-bottom: 2px solid #000;
-        }
+        /* 外边框增强 */
+        .cell:nth-child(9n+1) { border-left: 2px solid var(--border-color); }
+        .cell:nth-child(n+1):nth-child(-n+9) { border-top: 2px solid var(--border-color); }
+        .cell:nth-child(n+73) { border-bottom: 2px solid var(--border-color); }
 
         .prefilled {
-            background: #f5f5f5;
-            font-weight: bold;
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
         }
 
         .error {
-            background: #ffcccc !important;
+            background: #ffe3e3 !important;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
         }
 
         .controls {
-            margin-top: 20px;
+            margin-top: 25px;
             text-align: center;
         }
 
         button {
-            padding: 12px 24px;
+            padding: 12px 28px;
             margin: 0 10px;
             font-size: 16px;
-            background: #4CAF50;
-            color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            touch-action: manipulation;
+            transition: all 0.2s;
+            background: #3498db;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
         }
 
         @media (max-width: 480px) {
             :root {
-                --cell-size: 10vw;
+                --cell-size: 12vw;
             }
             button {
                 padding: 10px 20px;
                 font-size: 14px;
+                margin: 5px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 20px;">数独游戏</h1>
+        <h1>随机数独游戏</h1>
         <div class="sudoku-grid" id="grid"></div>
         <div class="controls">
             <button id="checkBtn">检查答案</button>
@@ -140,159 +150,125 @@
 
     <script>
         class SudokuGenerator {
-    constructor() {
-        this.grid = Array(9).fill().map(() => Array(9).fill(0));
-    }
+            constructor() {
+                this.grid = Array(9).fill().map(() => Array(9).fill(0));
+            }
 
-    generate() {
-        this.fillDiagonal();    // 填充对角线宫格
-        this.fillRemaining(0, 3); // 填充剩余部分
-        return this.grid;
-    }
+            generate() {
+                this.fillDiagonal();
+                this.fillRemaining(0, 3);
+                return this.grid;
+            }
 
-    // 填充对角线3x3宫格
-    fillDiagonal() {
-        for(let i=0; i<9; i+=3) {
-            let nums = this.shuffle([1,2,3,4,5,6,7,8,9]);
-            for(let r=0; r<3; r++) {
-                for(let c=0; c<3; c++) {
-                    this.grid[i+r][i+c] = nums[r*3+c];
+            fillDiagonal() {
+                for(let i = 0; i < 9; i += 3) {
+                    const nums = this.shuffle([...Array(9)].map((_, i) => i + 1));
+                    for(let r = 0; r < 3; r++) {
+                        for(let c = 0; c < 3; c++) {
+                            this.grid[i + r][i + c] = nums[r * 3 + c];
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    // 递归填充剩余部分
-    fillRemaining(row, col) {
-        if(col >= 9 && row < 8) {
-            row++;
-            col = 0;
-        }
-        if(row >= 9 && col >= 9) return true;
+            fillRemaining(row, col) {
+                if(col >= 9 && row < 8) {
+                    row++;
+                    col = 0;
+                }
+                if(row >= 9 && col >= 9) return true;
 
-        if(row < 3) {
-            if(col < 3) col = 3;
-        } else if(row < 6) {
-            if(col === Math.floor(row/3)*3) col += 3;
-        } else {
-            if(col === 6) {
-                row++;
-                col = 0;
-                if(row >= 9) return true;
+                if(row < 3 && col < 3) col = 3;
+                else if(row < 6 && col === Math.floor(row/3)*3) col += 3;
+                else if(col === 6) {
+                    row++;
+                    col = 0;
+                    if(row >= 9) return true;
+                }
+
+                const nums = this.shuffle([...Array(9)].map((_, i) => i + 1));
+                for(const num of nums) {
+                    if(this.isSafe(row, col, num)) {
+                        this.grid[row][col] = num;
+                        if(this.fillRemaining(row, col + 1)) return true;
+                        this.grid[row][col] = 0;
+                    }
+                }
+                return false;
+            }
+
+            isSafe(row, col, num) {
+                return !this.usedInRow(row, num) 
+                    && !this.usedInCol(col, num)
+                    && !this.usedInBox(row - row%3, col - col%3, num);
+            }
+
+            usedInRow(row, num) {
+                return this.grid[row].includes(num);
+            }
+
+            usedInCol(col, num) {
+                return this.grid.some(row => row[col] === num);
+            }
+
+            usedInBox(startRow, startCol, num) {
+                for(let r = 0; r < 3; r++) {
+                    for(let c = 0; c < 3; c++) {
+                        if(this.grid[startRow + r][startCol + c] === num) return true;
+                    }
+                }
+                return false;
+            }
+
+            shuffle(array) {
+                for(let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
             }
         }
 
-        for(let num=1; num<=9; num++) {
-            if(this.isSafe(row, col, num)) {
-                this.grid[row][col] = num;
-                if(this.fillRemaining(row, col+1)) return true;
-                this.grid[row][col] = 0;
-            }
-        }
-        return false;
-    }
-
-    // 检查数字是否安全
-    isSafe(row, col, num) {
-        return !this.usedInRow(row, num) &&
-               !this.usedInCol(col, num) &&
-               !this.usedInBox(row - row%3, col - col%3, num);
-    }
-
-    // 辅助方法
-    usedInRow(row, num) {
-        return this.grid[row].includes(num);
-    }
-
-    usedInCol(col, num) {
-        return this.grid.some(row => row[col] === num);
-    }
-
-    usedInBox(startRow, startCol, num) {
-        for(let r=0; r<3; r++) {
-            for(let c=0; c<3; c++) {
-                if(this.grid[startRow+r][startCol+c] === num) return true;
-            }
-        }
-        return false;
-    }
-
-    // 随机打乱数组
-    shuffle(array) {
-        for(let i = array.length-1; i>0; i--){
-            const j = Math.floor(Math.random()*(i+1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
         let solution = [];
         let puzzle = [];
 
-        // 初始化游戏
         function initGame() {
             generateSudoku();
             renderGrid();
-            
-            // 绑定按钮事件
             document.getElementById('checkBtn').addEventListener('click', checkSolution);
-            document.getElementById('newBtn').addEventListener('click', newGame);
+            document.getElementById('newBtn').addEventListener('click', () => {
+                generateSudoku();
+                renderGrid();
+            });
         }
 
-        // 生成数独题目
-            /*
         function generateSudoku() {
-            solution = Array(9).fill().map(() => Array(9).fill(0));
-            for(let i=0; i<9; i++) {
-                for(let j=0; j<9; j++) {
-                    solution[i][j] = (i*3 + Math.floor(i/3) + j) %9 +1;
-                }
-            }
-
-            puzzle = JSON.parse(JSON.stringify(solution));
+            const generator = new SudokuGenerator();
+            solution = generator.generate();
+            
+            // 挖空40个格子
+            puzzle = solution.map(row => [...row]);
             let holes = 40;
             while(holes > 0) {
-                let r = Math.floor(Math.random()*9);
-                let c = Math.floor(Math.random()*9);
+                const r = Math.floor(Math.random() * 9);
+                const c = Math.floor(Math.random() * 9);
                 if(puzzle[r][c] !== 0) {
                     puzzle[r][c] = 0;
                     holes--;
                 }
             }
-        }*/
-        function generateSudoku() {
-    const generator = new SudokuGenerator();
-    solution = generator.generate();
-    
-    // 挖空逻辑
-    puzzle = JSON.parse(JSON.stringify(solution));
-    let holes = 40;
-    while(holes > 0) {
-        let r = Math.floor(Math.random()*9);
-        let c = Math.floor(Math.random()*9);
-        if(puzzle[r][c] !== 0) {
-            puzzle[r][c] = 0;
-            holes--;
         }
-    }
-    
-    // 验证生成结果
-    if(!validateSolution(solution)) {
-        console.error('生成无效数独，重新生成...');
-        generateSudoku(); // 递归重新生成
-    }
-}    
 
-        // 渲染数独网格
         function renderGrid() {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
             
-            for(let index=0; index<81; index++) {
-                const row = Math.floor(index / 9);
-                const col = index % 9;
+            for(let i = 0; i < 81; i++) {
+                const row = Math.floor(i / 9);
+                const col = i % 9;
                 const cell = document.createElement('div');
-                cell.className = 'cell' + (puzzle[row][col] ? ' prefilled' : '');
-                
+                cell.className = `cell ${puzzle[row][col] ? 'prefilled' : ''}`;
+
                 if(puzzle[row][col]) {
                     cell.textContent = puzzle[row][col];
                 } else {
@@ -307,14 +283,18 @@
             }
         }
 
-        // 输入验证
         function validateInput(e, row, col) {
             const cell = e.target.parentElement;
             cell.classList.remove('error');
             
             const value = parseInt(e.target.value);
-            if(isNaN(value) || value < 1 || value > 9) {
+            if(isNaN(value)) {
                 e.target.value = '';
+                return;
+            }
+
+            if(value < 1 || value > 9) {
+                e.target.value = value > 9 ? 9 : '';
                 return;
             }
 
@@ -322,74 +302,34 @@
                 cell.classList.add('error');
             }
         }
-// 数独验证函数
-function validateSolution(grid) {
-    // 检查行
-    for(let row=0; row<9; row++) {
-        const set = new Set();
-        for(let col=0; col<9; col++) {
-            const num = grid[row][col];
-            if(num <1 || num >9 || set.has(num)) return false;
-            set.add(num);
-        }
-    }
-    
-    // 检查列
-    for(let col=0; col<9; col++) {
-        const set = new Set();
-        for(let row=0; row<9; row++) {
-            const num = grid[row][col];
-            if(set.has(num)) return false;
-            set.add(num);
-        }
-    }
-    
-    // 检查宫格
-    for(let box=0; box<9; box++) {
-        const set = new Set();
-        const startRow = Math.floor(box/3)*3;
-        const startCol = (box%3)*3;
-        for(let r=0; r<3; r++) {
-            for(let c=0; c<3; c++) {
-                const num = grid[startRow+r][startCol+c];
-                if(set.has(num)) return false;
-                set.add(num);
-            }
-        }
-    }
-    
-    return true;
-}
-            
 
-        // 有效性检查
         function isValid(row, col, num) {
             // 检查行
-            for(let c=0; c<9; c++) {
-                const val = getCellValue(row, c);
-                if(val === num && c !== col) return false;
+            for(let c = 0; c < 9; c++) {
+                if(getCellValue(row, c) === num && c !== col) return false;
             }
 
             // 检查列
-            for(let r=0; r<9; r++) {
-                const val = getCellValue(r, col);
-                if(val === num && r !== row) return false;
+            for(let r = 0; r < 9; r++) {
+                if(getCellValue(r, col) === num && r !== row) return false;
             }
 
             // 检查宫格
-            const startRow = Math.floor(row/3)*3;
-            const startCol = Math.floor(col/3)*3;
-            for(let r=0; r<3; r++) {
-                for(let c=0; c<3; c++) {
-                    const val = getCellValue(startRow+r, startCol+c);
-                    if(val === num && !(startRow+r === row && startCol+c === col)) return false;
+            const startRow = Math.floor(row / 3) * 3;
+            const startCol = Math.floor(col / 3) * 3;
+            for(let r = 0; r < 3; r++) {
+                for(let c = 0; c < 3; c++) {
+                    const currentRow = startRow + r;
+                    const currentCol = startCol + c;
+                    if(currentRow === row && currentCol === col) continue;
+                    if(getCellValue(currentRow, currentCol) === num) return false;
                 }
             }
             return true;
         }
 
         function getCellValue(row, col) {
-            const cell = document.querySelectorAll('.cell')[row*9 + col];
+            const cell = document.querySelectorAll('.cell')[row * 9 + col];
             if(cell.classList.contains('prefilled')) {
                 return parseInt(cell.textContent);
             }
@@ -397,35 +337,35 @@ function validateSolution(grid) {
             return input ? parseInt(input.value) || 0 : 0;
         }
 
-        // 检查答案
         function checkSolution() {
-            let hasEmpty = false;
-            for(let row=0; row<9; row++) {
-                for(let col=0; col<9; col++) {
+            let hasError = false;
+            let isEmpty = false;
+
+            document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('error'));
+
+            for(let row = 0; row < 9; row++) {
+                for(let col = 0; col < 9; col++) {
                     const val = getCellValue(row, col);
+                    const index = row * 9 + col;
+
                     if(val === 0) {
-                        document.querySelectorAll('.cell')[row*9 + col].classList.add('error');
-                        hasEmpty = true;
-                    } else if(val !== solution[row][col]) {
-                        alert('答案不正确！');
-                        return;
+                        document.querySelectorAll('.cell')[index].classList.add('error');
+                        isEmpty = true;
+                        continue;
+                    }
+
+                    if(val !== solution[row][col]) {
+                        document.querySelectorAll('.cell')[index].classList.add('error');
+                        hasError = true;
                     }
                 }
             }
-            if(hasEmpty) {
-                alert('请填写所有空格！');
-            } else {
-                alert('恭喜，答案正确！');
-            }
+
+            if(isEmpty) alert('请填写所有空格！');
+            else if(hasError) alert('答案有误，请检查红色格子！');
+            else alert('恭喜！答案完全正确！');
         }
 
-        // 新游戏
-        function newGame() {
-            generateSudoku();
-            renderGrid();
-        }
-
-        // 初始化游戏
         window.addEventListener('DOMContentLoaded', initGame);
     </script>
 </body>
