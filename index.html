@@ -1,284 +1,270 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>网页版数独游戏</title>
-    <style>
-        :root {
-            --cell-size: min(8vw, 50px);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>进阶数独游戏</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+	td {
+	  width: 10vw;
+	  height: 10vw;
+	  max-width: 50px;
+	  max-height: 50px;
+	}
+    input {
+      width: 100%;
+      height: 100%;
+	  font-size: 5vw;
+	  max-font-size: 24px;
+      text-align: center;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    input[readonly] {
+      background: #eee;
+      font-weight: bold;
+    }
+    .error {
+      background-color: #fdd !important;
+    }
+    td.thick-top    { border-top: 3px solid black; }
+    td.thick-left   { border-left: 3px solid black; }
+    td.thick-right  { border-right: 3px solid black; }
+    td.thick-bottom { border-bottom: 3px solid black; }
 
-        body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #f0f0f0;
-            touch-action: manipulation;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 600px;
-            padding: 20px;
-        }
-
-        .sudoku-grid {
-            display: grid;
-            grid-template-columns: repeat(9, var(--cell-size));
-            grid-template-rows: repeat(9, var(--cell-size));
-            gap: 0;
-            border: 2px solid #000;
-            margin: 0 auto;
-            background: #fff;
-        }
-
-        .cell {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: calc(var(--cell-size) * 0.4);
-            border: 1px solid #999;
-            box-sizing: border-box;
-        }
-
-        .cell input {
-            width: 100%;
-            height: 100%;
-            border: 0;
-            text-align: center;
-            font-size: inherit;
-            background: transparent;
-            -webkit-appearance: none;
-            -moz-appearance: textfield;
-        }
-
-        .cell input::-webkit-outer-spin-button,
-        .cell input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-        }
-
-        /* 3x3宫格边框 */
-        .cell:nth-child(3n) {
-            border-right: 2px solid #000;
-        }
-
-        .cell:nth-child(n+19):nth-child(-n+27),
-        .cell:nth-child(n+46):nth-child(-n+54),
-        .cell:nth-child(n+73) {
-            border-bottom: 2px solid #000;
-        }
-
-        /* 外边框 */
-        .cell:first-child,
-        .cell:nth-child(n+10):nth-child(-n+18),
-        .cell:nth-child(n+28):nth-child(-n+36) {
-            border-top: 2px solid #000;
-        }
-
-        .cell:nth-child(9n+1) {
-            border-left: 2px solid #000;
-        }
-
-        .cell:nth-child(9n) {
-            border-right: 2px solid #000;
-        }
-
-        .cell:nth-child(n+73) {
-            border-bottom: 2px solid #000;
-        }
-
-        .prefilled {
-            background: #f5f5f5;
-            font-weight: bold;
-        }
-
-        .error {
-            background: #ffcccc !important;
-        }
-
-        .controls {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        button {
-            padding: 12px 24px;
-            margin: 0 10px;
-            font-size: 16px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-
-        @media (max-width: 480px) {
-            :root {
-                --cell-size: 10vw;
-            }
-            button {
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-        }
-    </style>
+    .btns {
+      margin-top: 15px;
+    }
+    button, select {
+      margin: 5px;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #stats {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1 style="text-align: center; margin-bottom: 20px;">数独游戏</h1>
-        <div class="sudoku-grid" id="grid"></div>
-        <div class="controls">
-            <button id="checkBtn">检查答案</button>
-            <button id="newBtn">新游戏</button>
-        </div>
-    </div>
+  <h1>sudoku</h1>
 
-    <script>
-        let solution = [];
-        let puzzle = [];
+  <div class="btns">
+    <label for="difficulty">难度：</label>
+    <select id="difficulty">
+      <option value="45">简单</option>
+      <option value="36">普通</option>
+      <option value="30" selected>稍难</option>
+      <option value="24">困难</option>
+      <option value="17">地狱</option>
+    </select>
+    <br>
+    <button onclick="startGame()">新游戏</button>
+    <button onclick="checkResult()">检查结果</button>
+    <button onclick="giveHint()">💡 提示</button>
+  </div>
 
-        // 初始化游戏
-        function initGame() {
-            generateSudoku();
-            renderGrid();
-            
-            // 绑定按钮事件
-            document.getElementById('checkBtn').addEventListener('click', checkSolution);
-            document.getElementById('newBtn').addEventListener('click', newGame);
+  <div id="stats">
+    ⏱ 用时：<span id="timer">00:00</span> | ⏳ 步数：<span id="steps">0</span>
+  </div>
+
+  <div id="sudoku"></div>
+
+  <script>
+    const SIZE = 9;
+    let solution = [], timerInterval, time = 0, steps = 0;
+    let selectedInput = null;
+
+    function pad(n) { return n < 10 ? '0' + n : n; }
+
+    function updateTimer() {
+      time++;
+      const min = Math.floor(time / 60);
+      const sec = time % 60;
+      document.getElementById("timer").textContent = `${pad(min)}:${pad(sec)}`;
+    }
+
+    function resetStats() {
+      clearInterval(timerInterval);
+      time = 0;
+      steps = 0;
+      document.getElementById("timer").textContent = "00:00";
+      document.getElementById("steps").textContent = "0";
+    }
+
+    function createBoard() {
+      return Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function isValid(board, row, col, num) {
+      for (let i = 0; i < SIZE; i++) {
+        if (board[row][i] === num || board[i][col] === num) return false;
+      }
+      const startRow = Math.floor(row / 3) * 3;
+      const startCol = Math.floor(col / 3) * 3;
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+          if (board[startRow + i][startCol + j] === num) return false;
+      return true;
+    }
+
+    function fillBoard(board, row = 0, col = 0) {
+      if (row === SIZE) return true;
+      let nextRow = row, nextCol = col + 1;
+      if (nextCol === SIZE) { nextRow = row + 1; nextCol = 0; }
+      if (board[row][col] !== 0) return fillBoard(board, nextRow, nextCol);
+      const nums = [1,2,3,4,5,6,7,8,9];
+      shuffleArray(nums);
+      for (const num of nums) {
+        if (isValid(board, row, col, num)) {
+          board[row][col] = num;
+          if (fillBoard(board, nextRow, nextCol)) return true;
+          board[row][col] = 0;
         }
+      }
+      return false;
+    }
 
-        // 生成数独题目
-        function generateSudoku() {
-            solution = Array(9).fill().map(() => Array(9).fill(0));
-            for(let i=0; i<9; i++) {
-                for(let j=0; j<9; j++) {
-                    solution[i][j] = (i*3 + Math.floor(i/3) + j) %9 +1;
-                }
-            }
+    function generateSudoku() {
+      const board = createBoard();
+      fillBoard(board);
+      return board;
+    }
 
-            puzzle = JSON.parse(JSON.stringify(solution));
-            let holes = 40;
-            while(holes > 0) {
-                let r = Math.floor(Math.random()*9);
-                let c = Math.floor(Math.random()*9);
-                if(puzzle[r][c] !== 0) {
-                    puzzle[r][c] = 0;
-                    holes--;
-                }
-            }
+    function createPuzzle(fullBoard, clueCount = 30) {
+      const puzzle = fullBoard.map(row => row.slice());
+      let cellsToHide = SIZE * SIZE - clueCount;
+      while (cellsToHide > 0) {
+        const i = Math.floor(Math.random() * SIZE);
+        const j = Math.floor(Math.random() * SIZE);
+        if (puzzle[i][j] !== 0) {
+          puzzle[i][j] = 0;
+          cellsToHide--;
         }
+      }
+      return puzzle;
+    }
 
-        // 渲染数独网格
-        function renderGrid() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
-            
-            for(let index=0; index<81; index++) {
-                const row = Math.floor(index / 9);
-                const col = index % 9;
-                const cell = document.createElement('div');
-                cell.className = 'cell' + (puzzle[row][col] ? ' prefilled' : '');
-                
-                if(puzzle[row][col]) {
-                    cell.textContent = puzzle[row][col];
-                } else {
-                    const input = document.createElement('input');
-                    input.type = 'number';
-                    input.min = 1;
-                    input.max = 9;
-                    input.addEventListener('input', (e) => validateInput(e, row, col));
-                    cell.appendChild(input);
-                }
-                grid.appendChild(cell);
-            }
+    function displayBoard(puzzle) {
+      const container = document.getElementById("sudoku");
+      container.innerHTML = "";
+      const table = document.createElement("table");
+
+      for (let i = 0; i < SIZE; i++) {
+        const row = document.createElement("tr");
+        for (let j = 0; j < SIZE; j++) {
+          const cell = document.createElement("td");
+          if (i % 3 === 0) cell.classList.add("thick-top");
+          if (j % 3 === 0) cell.classList.add("thick-left");
+          if (j === SIZE - 1) cell.classList.add("thick-right");
+          if (i === SIZE - 1) cell.classList.add("thick-bottom");
+
+          const input = document.createElement("input");
+          input.dataset.row = i;
+          input.dataset.col = j;
+
+          if (puzzle[i][j] !== 0) {
+            input.value = puzzle[i][j];
+            input.readOnly = true;
+          } else {
+            input.addEventListener("input", () => {
+              validateInput(input);
+              steps++;
+              document.getElementById("steps").textContent = steps;
+            });
+            input.addEventListener("focus", () => selectedInput = input);
+          }
+          cell.appendChild(input);
+          row.appendChild(cell);
         }
+        table.appendChild(row);
+      }
+      container.appendChild(table);
+    }
 
-        // 输入验证
-        function validateInput(e, row, col) {
-            const cell = e.target.parentElement;
-            cell.classList.remove('error');
-            
-            const value = parseInt(e.target.value);
-            if(isNaN(value) || value < 1 || value > 9) {
-                e.target.value = '';
-                return;
-            }
+    function validateInput(input) {
+      input.classList.remove("error");
+      const val = parseInt(input.value);
+      const row = parseInt(input.dataset.row);
+      const col = parseInt(input.dataset.col);
+      if (isNaN(val) || val < 1 || val > 9) return;
 
-            if(!isValid(row, col, value)) {
-                cell.classList.add('error');
-            }
+      const inputs = document.querySelectorAll("input");
+      for (let other of inputs) {
+        if (other === input) continue;
+        const r = parseInt(other.dataset.row);
+        const c = parseInt(other.dataset.col);
+        if (parseInt(other.value) === val &&
+            (r === row || c === col || (Math.floor(r/3) === Math.floor(row/3) && Math.floor(c/3) === Math.floor(col/3)))) {
+          input.classList.add("error");
+          return;
         }
+      }
+    }
 
-        // 有效性检查
-        function isValid(row, col, num) {
-            // 检查行
-            for(let c=0; c<9; c++) {
-                const val = getCellValue(row, c);
-                if(val === num && c !== col) return false;
-            }
+    function checkResult() {
+      const inputs = document.querySelectorAll("input");
+      for (let input of inputs) input.classList.remove("error");
 
-            // 检查列
-            for(let r=0; r<9; r++) {
-                const val = getCellValue(r, col);
-                if(val === num && r !== row) return false;
-            }
-
-            // 检查宫格
-            const startRow = Math.floor(row/3)*3;
-            const startCol = Math.floor(col/3)*3;
-            for(let r=0; r<3; r++) {
-                for(let c=0; c<3; c++) {
-                    const val = getCellValue(startRow+r, startCol+c);
-                    if(val === num && !(startRow+r === row && startCol+c === col)) return false;
-                }
-            }
-            return true;
+      for (let input of inputs) {
+        const row = parseInt(input.dataset.row);
+        const col = parseInt(input.dataset.col);
+        const val = parseInt(input.value);
+        if (isNaN(val) || val !== solution[row][col]) {
+          input.classList.add("error");
         }
+      }
 
-        function getCellValue(row, col) {
-            const cell = document.querySelectorAll('.cell')[row*9 + col];
-            if(cell.classList.contains('prefilled')) {
-                return parseInt(cell.textContent);
-            }
-            const input = cell.querySelector('input');
-            return input ? parseInt(input.value) || 0 : 0;
-        }
+      const hasError = document.querySelector("input.error");
+      if (!hasError) {
+        alert("🎉 太棒了，全部正确！");
+      } else {
+        alert("⚠️ 有错误或空格，请检查红色提示。");
+      }
+    }
 
-        // 检查答案
-        function checkSolution() {
-            let hasEmpty = false;
-            for(let row=0; row<9; row++) {
-                for(let col=0; col<9; col++) {
-                    const val = getCellValue(row, col);
-                    if(val === 0) {
-                        document.querySelectorAll('.cell')[row*9 + col].classList.add('error');
-                        hasEmpty = true;
-                    } else if(val !== solution[row][col]) {
-                        alert('答案不正确！');
-                        return;
-                    }
-                }
-            }
-            if(hasEmpty) {
-                alert('请填写所有空格！');
-            } else {
-                alert('恭喜，答案正确！');
-            }
-        }
+    function giveHint() {
+      if (!selectedInput || selectedInput.readOnly) return;
+      const r = parseInt(selectedInput.dataset.row);
+      const c = parseInt(selectedInput.dataset.col);
+      selectedInput.value = solution[r][c];
+      validateInput(selectedInput);
+      steps++;
+      document.getElementById("steps").textContent = steps;
+    }
 
-        // 新游戏
-        function newGame() {
-            generateSudoku();
-            renderGrid();
-        }
+    function startGame() {
+      resetStats();
+      timerInterval = setInterval(updateTimer, 1000);
 
-        // 初始化游戏
-        window.addEventListener('DOMContentLoaded', initGame);
-    </script>
+      const diff = parseInt(document.getElementById("difficulty").value);
+      solution = generateSudoku();
+      const puzzle = createPuzzle(solution, diff);
+      displayBoard(puzzle);
+    }
+
+    window.onload = startGame;
+  </script>
 </body>
 </html>
