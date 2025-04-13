@@ -243,28 +243,89 @@
         }
       }
     }
+	function checkResult() {
+		const inputs = document.querySelectorAll("input");
+		const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0)); // 创建一个 9x9 的二维数组来存储当前盘面状态
+		let isComplete = true; // 标记盘面是否填写完整
 
-    function checkResult() {
-      const inputs = document.querySelectorAll("input");
-      for (let input of inputs) input.classList.remove("error");
+		// 1. 清除旧错误标记，并构建当前盘面数组
+		inputs.forEach(input => {
+			input.classList.remove("error"); // 清除之前的错误高亮
+			const r = parseInt(input.dataset.row);
+			const c = parseInt(input.dataset.col);
+			const val = parseInt(input.value);
 
-      for (let input of inputs) {
-        const row = parseInt(input.dataset.row);
-        const col = parseInt(input.dataset.col);
-        const val = parseInt(input.value);
-        if (isNaN(val) || val !== solution[row][col]) {
-          input.classList.add("error");
-        }
-      }
+			if (isNaN(val) || val < 1 || val > 9) {
+				isComplete = false; // 如果格子为空或无效数字，则盘面未完成
+				board[r][c] = 0; // 用 0 表示空格或无效输入
+			} else {
+				board[r][c] = val; // 记录用户输入的有效数字
+			}
+		});
 
-      const hasError = document.querySelector("input.error");
-      if (!hasError) {
-        alert("🎉 太棒了，全部正确！");
-      } else {
-        alert("⚠️ 有错误或空格，请检查红色提示。");
-      }
-    }
+		let hasConflict = false; // 标记是否存在冲突
 
+		// 2. 检查行、列、九宫格是否有冲突 (重复数字)
+		for (let r = 0; r < SIZE; r++) {
+			for (let c = 0; c < SIZE; c++) {
+				const num = board[r][c];
+				if (num === 0) continue; // 跳过空格或无效数字
+
+				// 检查同一行是否有重复 (只检查当前格子右侧的即可，避免重复检查)
+				for (let k = c + 1; k < SIZE; k++) {
+					if (board[r][k] === num) {
+						getInput(r, c).classList.add('error');
+						getInput(r, k).classList.add('error'); // 将冲突的两个格子都标红
+						hasConflict = true;
+					}
+				}
+
+				// 检查同一列是否有重复 (只检查当前格子下方的即可)
+				for (let k = r + 1; k < SIZE; k++) {
+					if (board[k][c] === num) {
+						getInput(r, c).classList.add('error');
+						getInput(k, c).classList.add('error');
+						hasConflict = true;
+					}
+				}
+
+				// 检查同一个 3x3 九宫格是否有重复
+				const startRow = Math.floor(r / 3) * 3;
+				const startCol = Math.floor(c / 3) * 3;
+				for (let i = 0; i < 3; i++) {
+					for (let j = 0; j < 3; j++) {
+						const boxR = startRow + i;
+						const boxC = startCol + j;
+						// 只检查当前格子之后（按先行后列顺序）的格子，避免重复检查和自身比较
+						if (boxR > r || (boxR === r && boxC > c)) {
+							if (board[boxR][boxC] === num) {
+								getInput(r, c).classList.add('error');
+								getInput(boxR, boxC).classList.add('error');
+								hasConflict = true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// 辅助函数：根据行和列获取对应的 input 元素
+		function getInput(r, c) {
+			return document.querySelector(`input[data-row="${r}"][data-col="${c}"]`);
+		}
+
+		// 3. 根据检查结果给出提示
+		if (hasConflict) {
+			alert("⚠️ 存在冲突的数字，请检查红色高亮单元格。");
+		} else if (!isComplete) {
+			alert("⚠️ 盘面未完成，请填满所有空格。");
+		} else {
+			// 如果代码执行到这里，说明盘面已完成且没有冲突
+			alert("🎉 太棒了，全部正确！");
+			// （可选）在这里停止计时器
+			 clearInterval(timerInterval);
+		}
+	}
     function giveHint() {
       if (!selectedInput || selectedInput.readOnly) return;
       const r = parseInt(selectedInput.dataset.row);
